@@ -11,7 +11,11 @@ class Car {
         this.friction = 0.05
         this.angle = 0
         this.damaged = false
-        this.sensor = role === 'PLAYER' ? new Sensor(this) : null
+        this.useBrain = role === 'AI'
+        if (role !== 'DUMMY') {
+            this.sensor = new Sensor(this)
+            this.brain = new NeuralNetwork([this.sensor.rayCount, 6, 4])
+        }
         this.controls = new Controls(role)
         this.polygon = this.#createPolygon()
     }
@@ -22,7 +26,19 @@ class Car {
             this.polygon = this.#createPolygon()
             this.damaged = this.#assessDamage(roadBorders, traffic)
         }
-        this.sensor && this.sensor.update(roadBorders, traffic)
+        if(this.sensor) { 
+            this.sensor.update(roadBorders, traffic)
+            // We calculate offsets for our network, we want it to receive low values when the car is far from the road borders and traffic, and high values when it's close
+            const offsets = this.sensor.readings.map(reading => reading ? 1-reading.offset : 0)
+            const outputs = NeuralNetwork.feedForward(offsets, this.brain)
+            if(this.useBrain) {
+                this.controls.forward = outputs[0]
+                this.controls.left = outputs[1]
+                this.controls.right = outputs[2]
+                this.controls.backward = outputs[3]
+            
+            }
+        }
     }
 
     #createPolygon () {
@@ -62,15 +78,15 @@ class Car {
         this.x -= Math.sin(this.angle) * this.speed
     }
 
-    draw(ctx) {
-        if(this.damaged) ctx.fillStyle = 'red'
-        if(!this.damaged) ctx.fillStyle = 'grey'
+    draw(ctx, color = 'black', drawSensors = false) {
+        if(this.damaged) ctx.fillStyle = 'grey'
+        if(!this.damaged) ctx.fillStyle = color
         ctx.beginPath()
         ctx.moveTo(this.polygon[0].x, this.polygon[0].y)
         this.polygon.forEach(point => {
             ctx.lineTo(point.x, point.y)
         })
         ctx.fill()
-        this.sensor && this.sensor.draw(ctx)
+        this.sensor && drawSensors && this.sensor.draw(ctx)
     }
 }

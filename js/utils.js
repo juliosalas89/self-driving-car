@@ -33,3 +33,12 @@ const polygonIntersects = (polygon1, polygon2) => {
     }
     return intersects
 }
+
+const getRGBA = (value) => {
+    // opacity based on absolute value
+    const alpha = Math.abs(value)
+    // Red for negaitve values, Green for positive values
+    const G = value < 0 ? 0 : 255
+    const R = value > 0 ? 0 : 255
+    return `rgba(${R},${G},0,${alpha})`
+}
