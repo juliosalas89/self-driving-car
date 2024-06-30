@@ -1,5 +1,5 @@
 class Car {
-    constructor (x, y, width, height) {
+    constructor ({ x, y, width, height, role = 'PLAYER', maxSpeed = 3 } = {}) {
         this.x = x
         this.y = y
         this.width = width
@@ -7,16 +7,59 @@ class Car {
         
         this.speed = 0;
         this.acceleration = 0.2
-        this.maxSpeed = 3
+        this.maxSpeed = maxSpeed
         this.friction = 0.05
         this.angle = 0
-        this.sensor = new Sensor(this)
-        this.controls = new Controls()
+        this.damaged = false
+        this.useBrain = role === 'AI'
+        if (role !== 'DUMMY') {
+            this.sensor = new Sensor(this)
+            this.brain = new NeuralNetwork([this.sensor.rayCount, 6, 4])
+        }
+        this.controls = new Controls(role)
+        this.polygon = this.#createPolygon()
     }
 
-    update (roadBorders) {
-        this.#move()
-        this.sensor.update(roadBorders)
+    update (roadBorders, traffic) {
+        if(!this.damaged) {
+            this.#move()
+            this.polygon = this.#createPolygon()
+            this.damaged = this.#assessDamage(roadBorders, traffic)
+        }
+        if(this.sensor) { 
+            this.sensor.update(roadBorders, traffic)
+            // We calculate offsets for our network, we want it to receive low values when the car is far from the road borders and traffic, and high values when it's close
+            const offsets = this.sensor.readings.map(reading => reading ? 1-reading.offset : 0)
+            const outputs = NeuralNetwork.feedForward(offsets, this.brain)
+            if(this.useBrain) {
+                this.controls.forward = outputs[0]
+                this.controls.left = outputs[1]
+                this.controls.right = outputs[2]
+                this.controls.backward = outputs[3]
+            
+            }
+        }
+    }
+
+    #createPolygon () {
+        const radius = Math.hypot(this.width, this.height) / 2
+        const alpha = Math.atan2(this.width, this.height)
+        return [
+            { x: this.x - Math.sin(this.angle - alpha) * radius, y : this.y - Math.cos(this.angle - alpha) * radius },
+            { x: this.x - Math.sin(this.angle + alpha) * radius, y : this.y - Math.cos(this.angle + alpha) * radius },
+            { x: this.x - Math.sin(Math.PI + this.angle - alpha) * radius, y : this.y - Math.cos(Math.PI + this.angle - alpha) * radius },
+            { x: this.x - Math.sin(Math.PI + this.angle + alpha) * radius, y : this.y - Math.cos(Math.PI + this.angle + alpha) * radius }
+        ]
+    }
+
+    #assessDamage (roadBorders, traffic) {
+        for (let i = 0; i < roadBorders.length; i++) {
+            if(polygonIntersects(this.polygon, roadBorders[i])) return true
+        }
+        for (let i = 0; i < traffic.length; i++) {
+            if(polygonIntersects(this.polygon, traffic[i].polygon)) return true
+        }
+        return false
     }
 
     #move () {
@@ -35,20 +78,15 @@ class Car {
         this.x -= Math.sin(this.angle) * this.speed
     }
 
-    draw(ctx) {
-        ctx.save()
-        ctx.translate(this.x, this.y)
-        ctx.rotate(-this.angle)
+    draw(ctx, color = 'black', drawSensors = false) {
+        if(this.damaged) ctx.fillStyle = 'grey'
+        if(!this.damaged) ctx.fillStyle = color
         ctx.beginPath()
-        ctx.rect(
-            - this.width / 2, 
-            - this.height /2, 
-            this.width, 
-            this.height
-        )
+        ctx.moveTo(this.polygon[0].x, this.polygon[0].y)
+        this.polygon.forEach(point => {
+            ctx.lineTo(point.x, point.y)
+        })
         ctx.fill()
-        ctx.restore()
-
-        this.sensor.draw(ctx)
+        this.sensor && drawSensors && this.sensor.draw(ctx)
     }
 }

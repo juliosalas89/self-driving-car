@@ -1,10 +1,13 @@
 class Controls {
-    constructor() {
+    constructor(role) {
         this.forward = false
         this.backward = false
         this.left = false
         this.right = false
-        this.#addKeyboardListeners()
+        if(role === 'PLAYER') this.#addKeyboardListeners()
+        if(role === 'DUMMY') {
+            this.forward = true
+        }
     }
     #addKeyboardListeners() {
         document.addEventListener('keydown', event => {

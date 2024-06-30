@@ -1,5 +1,5 @@
 class Sensor {
-    constructor(car, rayCount = 10, rayLength = 300, raySpread = Math.PI / 2) {
+    constructor(car, rayCount = 7, rayLength = 200, raySpread = Math.PI / 2) {
         this.car = car
         this.rayCount = rayCount
         this.rayLength = rayLength
@@ -8,16 +8,24 @@ class Sensor {
         this.readings = []
     }
 
-    update (roadBorders) {
+    update (roadBorders, traffic) {
         this.#castRayd()
-        this.readings = this.rays.map(ray => this.#getReading(ray, roadBorders)) 
+        this.readings = this.rays.map(ray => this.#getReading(ray, roadBorders, traffic)) 
     }
 
-    #getReading([start, end], roadBorders) {
+    #getReading(ray, roadBorders, traffic) {
         const touches = []
         roadBorders.forEach(([borderStart, borderEnd]) => {
-            const touch = getIntersection(start, end, borderStart, borderEnd)
+            const touch = getIntersection(ray[0], ray[1], borderStart, borderEnd)
             touch && touches.push(touch)
+        })
+        traffic.forEach(trafficCar => {
+            for(let i = 0; i < trafficCar.polygon.length; i++) {
+                const p1 = trafficCar.polygon[i]
+                const p2 = trafficCar.polygon[(i + 1) % trafficCar.polygon.length]
+                const touch = getIntersection(ray[0], ray[1], p1, p2)
+                touch && touches.push(touch)
+            }
         })
         const closestOffset = touches.length && Math.min(...touches.map(({offset}) => offset))
         return closestOffset && touches.find(({offset}) => offset === closestOffset)

@@ -16,3 +16,29 @@ const getIntersection = (A, B, C, D) => {
         offset: t
     }
 }
+
+const polygonIntersects = (polygon1, polygon2) => {
+    let intersects = false
+    for (let i = 0; i < polygon1.length; i++) {
+        const p11 = polygon1[i]
+        const p12 = polygon1[(i + 1) % polygon1.length]
+        for (let j = 0; j < polygon2.length; j++) {
+            const p21 = polygon2[j]
+            const p22 = polygon2[(j + 1) % polygon2.length]
+            if (getIntersection(p11, p12, p21, p22)) {
+                intersects = true
+                break
+            }
+        }
+    }
+    return intersects
+}
+
+const getRGBA = (value) => {
+    // opacity based on absolute value
+    const alpha = Math.abs(value)
+    // Red for negaitve values, Green for positive values
+    const G = value < 0 ? 0 : 255
+    const R = value > 0 ? 0 : 255
+    return `rgba(${R},${G},0,${alpha})`
+}

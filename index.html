@@ -4,10 +4,17 @@
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <canvas id="mainCanvas"></canvas>
+    <canvas id="carCanvas"></canvas>
+    <div id="buttons">
+        <button onclick="save()">Save Brain</button>
+        <button onclick="discard()">Discard Stored Brain</button>
+    </div>
+    <canvas id="networkCanvas"></canvas>
 
-    <script src="js/utils.js"></script>
+    <script src="js/visualizer.js"></script>
+    <script src="js/network.js"></script>
     <script src="js/sensor.js"></script>
+    <script src="js/utils.js"></script>
     <script src="js/road.js"></script>
     <script src="js/controls.js"></script>
     <script src="js/car.js"></script>
